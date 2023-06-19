@@ -12,6 +12,27 @@ import (
 	"github.com/kristofferostlund/chroma-go/chroma/chromaclient"
 )
 
+type Collection struct {
+	ID       string
+	Name     string
+	Metadata map[string]interface{}
+
+	api          chromaclient.ClientInterface
+	embeddingGen EmbeddingGenerator
+}
+
+type SimpleCollection struct {
+	ID       string                 `json:"id"`
+	Name     string                 `json:"name"`
+	Metadata map[string]interface{} `json:"metadata"`
+}
+
+type Embedding = []float64
+
+type EmbeddingGenerator interface {
+	Generate(ctx context.Context, texts []string) ([]Embedding, error)
+}
+
 type Client struct {
 	api chromaclient.ClientInterface
 }
@@ -93,6 +114,126 @@ func (c *Client) Heartbeat(ctx context.Context) (time.Time, error) {
 	}
 
 	return at, nil
+}
+
+type collectionOpts struct {
+	createOrGet   bool
+	metadata      map[string]interface{}
+	embeddingFunc EmbeddingGenerator
+}
+
+type CollectionOpts func(*collectionOpts)
+
+func WithMetadata(metadata map[string]interface{}) CollectionOpts {
+	return func(c *collectionOpts) {
+		c.metadata = metadata
+	}
+}
+
+func WithEmbeddingFunc(embeddingFunc EmbeddingGenerator) CollectionOpts {
+	return func(c *collectionOpts) {
+		c.embeddingFunc = embeddingFunc
+	}
+}
+
+func (c *Client) CreateCollection(ctx context.Context, name string, opts ...CollectionOpts) (*Collection, error) {
+	collOpts := collOptsOf(opts)
+	// This is the explicit create function, we want to fail if the collection already exists.
+	collOpts.createOrGet = false
+
+	return c.createOrGetCollection(ctx, name, collOpts)
+}
+
+func (c *Client) GetOrCreateCollection(ctx context.Context, name string, opts ...CollectionOpts) (*Collection, error) {
+	collOpts := collOptsOf(opts)
+	collOpts.createOrGet = true
+
+	return c.createOrGetCollection(ctx, name, collOpts)
+}
+
+func (c *Client) GetCollection(ctx context.Context, name string, opts ...CollectionOpts) (*Collection, error) {
+	collOpts := collOptsOf(opts)
+	if len(collOpts.metadata) > 0 {
+		return nil, fmt.Errorf("cannot set metadata when getting collection, use GetOrCreateCollection to update the metadata")
+	}
+
+	r, err := handleResponse(c.api.GetCollection(ctx, name))
+	if err != nil {
+		return nil, fmt.Errorf("getting collection: %w", err)
+	}
+
+	var simpleColl SimpleCollection
+	if err := r.decodeJSON(&simpleColl); err != nil {
+		return nil, fmt.Errorf("decoding JSON: %w", err)
+	}
+
+	return c.collectionOf(simpleColl, collOpts), nil
+}
+
+func (c *Client) ListCollections(ctx context.Context) ([]SimpleCollection, error) {
+	r, err := handleResponse(c.api.ListCollections(ctx))
+	if err != nil {
+		return nil, fmt.Errorf("listing collections: %w", err)
+	}
+
+	var collections []SimpleCollection
+	if err := r.decodeJSON(&collections); err != nil {
+		return nil, fmt.Errorf("decoding JSON: %w", err)
+	}
+
+	return collections, nil
+}
+
+func (c *Client) DeleteCollection(ctx context.Context, name string) error {
+	if _, err := handleResponse(c.api.DeleteCollection(ctx, name)); err != nil {
+		return fmt.Errorf("deleting collection: %w", err)
+	}
+	return nil
+}
+
+func (c *Client) createOrGetCollection(ctx context.Context, name string, collOpts *collectionOpts) (*Collection, error) {
+	body := chromaclient.CreateCollection{
+		Name:        name,
+		Metadata:    &collOpts.metadata,
+		GetOrCreate: &collOpts.createOrGet,
+	}
+
+	r, err := handleResponse(c.api.CreateCollection(ctx, body))
+	if err != nil {
+		return nil, fmt.Errorf("creating collection: %w", err)
+	}
+
+	var simpleColl SimpleCollection
+	if err := r.decodeJSON(&simpleColl); err != nil {
+		return nil, fmt.Errorf("decoding JSON: %w", err)
+	}
+
+	return c.collectionOf(simpleColl, collOpts), nil
+}
+
+func (c *Client) collectionOf(simpleColl SimpleCollection, collOpts *collectionOpts) *Collection {
+	coll := &Collection{
+		ID:       simpleColl.ID,
+		Name:     simpleColl.Name,
+		Metadata: simpleColl.Metadata,
+
+		api:          c.api,
+		embeddingGen: nil,
+	}
+
+	// embeddingGen is optional.
+	if collOpts.embeddingFunc != nil {
+		coll.embeddingGen = collOpts.embeddingFunc
+	}
+	return coll
+}
+
+func collOptsOf(opts []CollectionOpts) *collectionOpts {
+	collOpts := &collectionOpts{}
+	for _, opt := range opts {
+		opt(collOpts)
+	}
+	return collOpts
 }
 
 type requestWrapper struct {
