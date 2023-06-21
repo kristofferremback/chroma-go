@@ -2,7 +2,10 @@ module github.com/kristofferostlund/chroma-go
 
 go 1.20
 
-require github.com/deepmap/oapi-codegen v1.13.0
+require (
+	github.com/deepmap/oapi-codegen v1.13.0
+	github.com/sashabaranov/go-openai v1.11.2
+)
 
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect

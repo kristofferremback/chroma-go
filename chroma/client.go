@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"math/big"
 	"net/http"
@@ -12,25 +13,21 @@ import (
 	"github.com/kristofferostlund/chroma-go/chroma/chromaclient"
 )
 
-type Collection struct {
-	ID       string
-	Name     string
-	Metadata map[string]interface{}
-
-	api          chromaclient.ClientInterface
-	embeddingGen EmbeddingGenerator
-}
-
 type SimpleCollection struct {
-	ID       string                 `json:"id"`
-	Name     string                 `json:"name"`
-	Metadata map[string]interface{} `json:"metadata"`
+	ID       string   `json:"id"`
+	Name     string   `json:"name"`
+	Metadata Metadata `json:"metadata"`
 }
 
-type Embedding = []float64
+type (
+	Embedding = []float64
+	ID        = string
+	Document  = string
+	Metadata  = map[string]interface{}
+)
 
 type EmbeddingGenerator interface {
-	Generate(ctx context.Context, texts []string) ([]Embedding, error)
+	Generate(ctx context.Context, documents []Document) ([]Embedding, error)
 }
 
 type Client struct {
@@ -118,13 +115,13 @@ func (c *Client) Heartbeat(ctx context.Context) (time.Time, error) {
 
 type collectionOpts struct {
 	createOrGet   bool
-	metadata      map[string]interface{}
+	metadata      Metadata
 	embeddingFunc EmbeddingGenerator
 }
 
 type CollectionOpts func(*collectionOpts)
 
-func WithMetadata(metadata map[string]interface{}) CollectionOpts {
+func WithMetadata(metadata Metadata) CollectionOpts {
 	return func(c *collectionOpts) {
 		c.metadata = metadata
 	}
@@ -245,17 +242,32 @@ func handleResponse(res *http.Response, err error) (*requestWrapper, error) {
 		return nil, fmt.Errorf("requesting: %w", err)
 	}
 
-	if got, want := res.StatusCode, http.StatusOK; got != want {
-		return nil, fmt.Errorf("requesting: got status %d, want %d", got, want)
+	if got, wantBelow := res.StatusCode, 300; got >= wantBelow {
+		return nil, tryWrapErrorFromBody(res, fmt.Errorf("requesting: got status %d, want below %d", got, wantBelow))
 	}
 
 	return &requestWrapper{res}, nil
 }
 
-func (h *requestWrapper) decodeJSON(out any) error {
+func (h *requestWrapper) decodeJSON(out interface{}) error {
 	defer h.res.Body.Close()
 	if err := json.NewDecoder(h.res.Body).Decode(&out); err != nil {
 		return fmt.Errorf("decoding response: %w", err)
 	}
 	return nil
+}
+
+func tryWrapErrorFromBody(res *http.Response, originalErr error) error {
+	if res.Body == nil {
+		return originalErr
+	}
+
+	defer res.Body.Close()
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		// Ignore err, maybe consider logging?
+		return originalErr
+	}
+
+	return fmt.Errorf("%w: response: %s", originalErr, string(b))
 }

@@ -698,7 +698,11 @@
             "title": "Embeddings",
             "type": "array",
             "items": {
-              "type": "object"
+              "type": "array",
+              "items": {
+                "type": "number",
+                "format": "double"
+              }
             }
           },
           "metadatas": {
@@ -922,7 +926,11 @@
             "title": "Embeddings",
             "type": "array",
             "items": {
-              "type": "object"
+              "type": "array",
+              "items": {
+                "type": "number",
+                "format": "double"
+              }
             }
           },
           "metadatas": {

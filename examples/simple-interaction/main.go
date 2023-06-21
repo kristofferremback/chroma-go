@@ -8,9 +8,13 @@ import (
 	"time"
 
 	"github.com/kristofferostlund/chroma-go/chroma"
+	"github.com/kristofferostlund/chroma-go/chroma/embeddings/openai"
 )
 
-var chromaURL = flag.String("chroma-url", "http://localhost:8000", "URL to chromadb server")
+var (
+	chromaURL       = flag.String("chroma-url", "http://localhost:8000", "URL to chromadb server")
+	openaiAuthToken = flag.String("openai-auth-token", "", "OpenAI API auth token")
+)
 
 func main() {
 	flag.Parse()
@@ -43,7 +47,7 @@ func main() {
 	// Create a new collection
 	collName := fmt.Sprintf("coll-%d", time.Now().UnixMilli())
 	meta := map[string]interface{}{"hnsw:space": "cosine"}
-	embeddingFunc := &dummyEmbeddingGenerator{calls: make([][]string, 0)}
+	embeddingFunc := openai.NewEmbeddingGenerator(*openaiAuthToken)
 
 	coll, err := client.CreateCollection(
 		ctx,
@@ -58,7 +62,8 @@ func main() {
 
 	// Update the collection
 	updatedMeta := map[string]interface{}{"hnsw:space": "cosine", "second": "try"}
-	updated, err := client.GetOrCreateCollection(
+
+	coll, err = client.GetOrCreateCollection(
 		ctx,
 		collName,
 		chroma.WithMetadata(updatedMeta),
@@ -67,7 +72,27 @@ func main() {
 	if err != nil {
 		log.Fatalf("updating collection: %v", err)
 	}
-	log.Printf("updated collection: %+v", updated)
+	log.Printf("coll collection: %+v", coll)
+
+	for i := 0; i < 3; i++ {
+		success, err := coll.AddOne(ctx, fmt.Sprintf("id-%d", i+1), nil, chroma.Metadata{"this": "is fine", "index": fmt.Sprint(i)}, fmt.Sprintf("Hi %v", i))
+		if err != nil {
+			log.Fatalf("adding document: %v", err)
+		}
+		log.Printf("added document: %v", success)
+	}
+
+	success, err := coll.UpsertOne(ctx, "id-1", nil, chroma.Metadata{"this": "is fine", "index": "1", "updated": "true"}, "Hi 1")
+	if err != nil {
+		log.Fatalf("upserting document: %v", err)
+	}
+	log.Printf("upserted document: %v", success)
+
+	count, err := coll.Count(ctx)
+	if err != nil {
+		log.Fatalf("counting documents: %v", err)
+	}
+	log.Printf("there are %d documents in the collection", count)
 
 	// Delete it
 	if err := client.DeleteCollection(ctx, collName); err != nil {
@@ -75,13 +100,4 @@ func main() {
 	}
 
 	log.Printf("done!")
-}
-
-type dummyEmbeddingGenerator struct {
-	calls [][]string
-}
-
-func (d *dummyEmbeddingGenerator) Generate(ctx context.Context, texts []string) ([]chroma.Embedding, error) {
-	d.calls = append(d.calls, texts)
-	return nil, nil
 }

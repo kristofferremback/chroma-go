@@ -28,7 +28,7 @@ const (
 // AddEmbedding defines model for AddEmbedding.
 type AddEmbedding struct {
 	Documents      *[]string                 `json:"documents,omitempty"`
-	Embeddings     *[]map[string]interface{} `json:"embeddings,omitempty"`
+	Embeddings     *[][]float64              `json:"embeddings,omitempty"`
 	Ids            []string                  `json:"ids"`
 	IncrementIndex *bool                     `json:"increment_index,omitempty"`
 	Metadatas      *[]map[string]interface{} `json:"metadatas,omitempty"`
@@ -93,7 +93,7 @@ type UpdateCollection struct {
 // UpdateEmbedding defines model for UpdateEmbedding.
 type UpdateEmbedding struct {
 	Documents      *[]string                 `json:"documents,omitempty"`
-	Embeddings     *[]map[string]interface{} `json:"embeddings,omitempty"`
+	Embeddings     *[][]float64              `json:"embeddings,omitempty"`
 	Ids            []string                  `json:"ids"`
 	IncrementIndex *bool                     `json:"increment_index,omitempty"`
 	Metadatas      *[]map[string]interface{} `json:"metadatas,omitempty"`

@@ -1,5 +1,5 @@
-chroma/chromaclient/openapi.json:
+openapi-generate:
 	./scripts/openapi-generate.sh
 
-go-gen: chroma/chromaclient/openapi.json
+go-gen: openapi-generate
 	go generate ./...

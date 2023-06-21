@@ -36,13 +36,21 @@ $SED_CMD -e 's/"title": "Collection Name"/"title": "Collection Name","type": "st
 # We want them in a single enum instead (type: string, enum: [documents, embeddings])
 jq '
   (.components.schemas.QueryEmbedding.properties.include).items |= {
-    "type": "string",
-    "enum": (.anyOf | map(.enum[0]))
-  }
+      "type": "string",
+      "enum": (.anyOf | map(.enum[0]))
+    }
   | (.components.schemas.GetEmbedding.properties.include).items |= {
       "type": "string",
       "enum": (.anyOf | map(.enum[0]))
-  }
+    }
+  | (.components.schemas.AddEmbedding.properties.embeddings).items |= {
+      "type": "array",
+      "items": { "type": "number", "format": "double" }
+    }
+  | (.components.schemas.UpdateEmbedding.properties.embeddings).items |= {
+      "type": "array",
+      "items": { "type": "number", "format": "double" }
+    }
 ' "$tempfile" > "$filepath"
 
 echo "Wrote $filepath"
