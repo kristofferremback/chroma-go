@@ -46,7 +46,7 @@ func main() {
 
 	// Create a new collection
 	collName := fmt.Sprintf("coll-%d", time.Now().UnixMilli())
-	meta := map[string]interface{}{"hnsw:space": "cosine"}
+	meta := map[string]interface{}{"hnsw:space": "cosine", "updated_at": time.Now().Format(time.RFC3339Nano)}
 	embeddingFunc := openai.NewEmbeddingGenerator(*openaiAuthToken)
 
 	coll, err := client.CreateCollection(
@@ -61,25 +61,19 @@ func main() {
 	log.Printf("created collection: %+v", coll)
 
 	// Update the collection
-	updatedMeta := map[string]interface{}{"hnsw:space": "cosine", "second": "try"}
-
-	coll, err = client.GetOrCreateCollection(
-		ctx,
-		collName,
-		chroma.WithMetadata(updatedMeta),
-		chroma.WithEmbeddingFunc(embeddingFunc),
-	)
-	if err != nil {
+	collName += "-updated"
+	updatedMeta := map[string]interface{}{"hnsw:space": "cosine", "updated_at": time.Now().Format(time.RFC3339Nano)}
+	if err := coll.Modify(ctx, collName, updatedMeta); err != nil {
 		log.Fatalf("updating collection: %v", err)
 	}
-	log.Printf("coll collection: %+v", coll)
+	log.Printf("updated collection: %+v", coll)
 
 	for i := 0; i < 3; i++ {
 		success, err := coll.AddOne(ctx, fmt.Sprintf("id-%d", i+1), nil, chroma.Metadata{"this": "is fine", "index": fmt.Sprint(i)}, fmt.Sprintf("Hi %v", i))
 		if err != nil {
 			log.Fatalf("adding document: %v", err)
 		}
-		log.Printf("added document: %v", success)
+		log.Printf("added 	document: %v", success)
 	}
 
 	success, err := coll.UpsertOne(ctx, "id-1", nil, chroma.Metadata{"this": "is fine", "index": "1", "updated": "true"}, "Hi 1")

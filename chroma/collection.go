@@ -119,6 +119,33 @@ func (c *Collection) UpsertOne(ctx context.Context, id ID, embedding Embedding, 
 	return c.Upsert(ctx, ids, embeddings, metadatas, documents)
 }
 
+func (c *Collection) Modify(ctx context.Context, name string, metadata Metadata) error {
+	body := chromaclient.UpdateCollection{
+		NewMetadata: nil,
+		NewName:     nil,
+	}
+
+	if name != "" {
+		body.NewName = &name
+	}
+	if len(metadata) > 0 {
+		body.NewMetadata = &metadata
+	}
+
+	if _, err := handleResponse(c.api.UpdateCollection(ctx, c.ID, body)); err != nil {
+		return fmt.Errorf("modifying: %w", err)
+	}
+
+	if name != "" {
+		c.Name = name
+	}
+	if len(metadata) > 0 {
+		c.Metadata = metadata
+	}
+
+	return nil
+}
+
 func (c *Collection) validatedAddEmbedding(ctx context.Context, ids []ID, embeddings []Embedding, metadatas []Metadata, documents []Document) (chromaclient.AddEmbedding, error) {
 	if len(embeddings) == 0 && len(documents) == 0 {
 		return chromaclient.AddEmbedding{}, fmt.Errorf("%w: no embeddings or documents", ErrInvalidInput)
