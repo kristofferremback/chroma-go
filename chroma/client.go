@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"math"
-	"math/big"
 	"net/http"
 	"time"
 
@@ -75,42 +73,13 @@ func (c *Client) Heartbeat(ctx context.Context) (time.Time, error) {
 	}
 
 	var res struct {
-		NanosecondHeartbeat *big.Int `json:"nanosecond heartbeat"`
+		NanosecondHeartbeat int64 `json:"nanosecond heartbeat"`
 	}
 	if err := h.decodeJSON(&res); err != nil {
 		return time.Time{}, fmt.Errorf("sending heartbeat: %w", err)
 	}
 
-	var ns int64
-	if !res.NanosecondHeartbeat.IsInt64() {
-		// At time of writing, the server returns the number of nanoseconds since epoch
-		// **multiplied by 1000** which is also why we're using big.Int.
-		// We could probably perform a better check, but this does the trick.
-		// See below:
-		// ```python
-		// def heartbeat(self) -> int:
-		//     """Ping the database to ensure it is alive
-		//     Returns:
-		//         The current time in milliseconds
-		//     """
-		//     return int(1000 * time.time_ns())` # <-- this right here
-		// ```
-		// Reported the issue here: https://github.com/chroma-core/chroma/issues/711
-		// and made a PR here: https://github.com/chroma-core/chroma/pull/712
-		ns = res.NanosecondHeartbeat.Div(res.NanosecondHeartbeat, big.NewInt(1000)).Int64()
-	} else {
-		ns = res.NanosecondHeartbeat.Int64()
-	}
-
-	at := time.Unix(0, ns)
-	if math.Abs(float64(time.Now().Year()-at.Year())) > 10 {
-		// If the year is off by more than 10 years, the bug has probably been fixed
-		// and we're now getting the time in milliseconds as per the in-code comment.
-		// I feel like I'm wearing such a tinfoil hat right now.
-		at = time.UnixMilli(ns)
-	}
-
-	return at, nil
+	return time.Unix(0, res.NanosecondHeartbeat), nil
 }
 
 type collectionOpts struct {
