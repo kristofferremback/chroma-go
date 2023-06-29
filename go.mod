@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/deepmap/oapi-codegen v1.13.0
 	github.com/sashabaranov/go-openai v1.11.2
+	golang.org/x/sync v0.2.0
 )
 
 require (

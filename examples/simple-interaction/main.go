@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/kristofferostlund/chroma-go/chroma"
+	"github.com/kristofferostlund/chroma-go/chroma/embeddings/cached"
 	"github.com/kristofferostlund/chroma-go/chroma/embeddings/openai"
+	"golang.org/x/sync/errgroup"
 )
 
 var (
@@ -42,12 +44,16 @@ func main() {
 	log.Printf("found %d existing collections", len(colls))
 	for _, c := range colls {
 		log.Printf("  - existing collection: %+v", c)
+		if err := client.DeleteCollection(ctx, c.Name); err != nil {
+			log.Fatalf("deleting collection: %v", err)
+		}
 	}
 
 	// Create a new collection
 	collName := fmt.Sprintf("coll-%d", time.Now().UnixMilli())
 	meta := map[string]interface{}{"hnsw:space": "cosine", "updated_at": time.Now().Format(time.RFC3339Nano)}
-	embeddingFunc := openai.NewEmbeddingGenerator(*openaiAuthToken)
+	// embeddingFunc := openai.NewEmbeddingGenerator(*openaiAuthToken)
+	embeddingFunc := cached.NewEmbeddingsGenerator(ctx, openai.NewEmbeddingGenerator(*openaiAuthToken))
 
 	coll, err := client.CreateCollection(
 		ctx,
@@ -68,19 +74,66 @@ func main() {
 	}
 	log.Printf("updated collection: %+v", coll)
 
-	for i := 0; i < 3; i++ {
-		success, err := coll.AddOne(ctx, fmt.Sprintf("id-%d", i+1), nil, chroma.Metadata{"this": "is fine", "index": fmt.Sprint(i)}, fmt.Sprintf("Hi %v", i))
-		if err != nil {
-			log.Fatalf("adding document: %v", err)
+	useBatch := true
+	docCount := 500
+
+	if useBatch {
+		ids := make([]chroma.ID, 0, docCount/2)
+		metadatas := make([]chroma.Metadata, 0, docCount)
+		docs := make([]chroma.Document, 0, docCount)
+		for i := 0; i < docCount; i++ {
+			id, metadata, doc := buildEmbeddingDoc(i, "add-batch")
+			ids = append(ids, id)
+			metadatas = append(metadatas, metadata)
+			docs = append(docs, doc)
 		}
-		log.Printf("added 	document: %v", success)
+
+		success, err := coll.Add(ctx, ids, nil, metadatas, docs)
+		if err != nil {
+			log.Fatalf("adding documents %d: %v", len(ids), err)
+		}
+		log.Printf("added %d documents: %v", len(docs), success)
+	} else {
+		eg, ctx := errgroup.WithContext(ctx)
+		for i := 0; i < docCount; i++ {
+			idx := i
+			eg.Go(func() error {
+				log.Printf("running %d", idx)
+
+				id, metadata, doc := buildEmbeddingDoc(idx, "add")
+				success, err := coll.AddOne(ctx, id, nil, metadata, doc)
+				if err != nil {
+					return fmt.Errorf("adding document (%d): %w", idx, err)
+				}
+				log.Printf("added document: %v", success)
+				return nil
+			})
+		}
+		if err := eg.Wait(); err != nil {
+			log.Fatalf("adding documents: %v", err)
+		}
 	}
 
-	success, err := coll.UpsertOne(ctx, "id-1", nil, chroma.Metadata{"this": "is fine", "index": "1", "updated": "true"}, "Hi 1")
-	if err != nil {
-		log.Fatalf("upserting document: %v", err)
+	// Separate blocks for scoping id, metadata, doc
+	{
+		id, metadata, doc := buildEmbeddingDoc(0, "upsert")
+		upsertSuccess, err := coll.UpsertOne(ctx, id, nil, metadata, doc)
+		if err != nil {
+			log.Fatalf("upserting document: %v", err)
+		}
+		log.Printf("upserted document: %v", upsertSuccess)
 	}
-	log.Printf("upserted document: %v", success)
+
+	// Separate blocks for scoping id, metadata, doc
+	{
+		id, metadata, doc := buildEmbeddingDoc(1, "update")
+		doc += " updated"
+		updateSuccess, err := coll.UpdateOne(ctx, id, nil, metadata, doc)
+		if err != nil {
+			log.Fatalf("updating document: %v", err)
+		}
+		log.Printf("updated document: %v", updateSuccess)
+	}
 
 	count, err := coll.Count(ctx)
 	if err != nil {
@@ -94,4 +147,15 @@ func main() {
 	}
 
 	log.Printf("done!")
+}
+
+func buildEmbeddingDoc(idx int, operation string) (chroma.ID, chroma.Metadata, chroma.Document) {
+	doc := "Hi there"
+	if idx%2 == 0 {
+		doc = fmt.Sprintf("Hi %d", idx)
+	}
+
+	id := fmt.Sprintf("id-%d", idx+1)
+	metadata := chroma.Metadata{"operation": operation, "index": fmt.Sprint(idx), "updated_at": time.Now().Format(time.RFC3339Nano)}
+	return id, metadata, doc
 }
