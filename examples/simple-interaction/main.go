@@ -75,7 +75,7 @@ func main() {
 	log.Printf("updated collection: %+v", coll)
 
 	useBatch := true
-	docCount := 500
+	docCount := 5
 
 	if useBatch {
 		ids := make([]chroma.ID, 0, docCount/2)
@@ -122,6 +122,15 @@ func main() {
 			log.Fatalf("upserting document: %v", err)
 		}
 		log.Printf("upserted document: %v", upsertSuccess)
+
+		got, err := coll.Get(ctx, chroma.GetQuery{
+			IDs:     []chroma.ID{id},
+			Include: []chroma.Include{chroma.IncludeDocuments, chroma.IncludeMetadatas},
+		})
+		if err != nil {
+			log.Fatalf("getting document: %v", err)
+		}
+		log.Printf("got document: %+v", got)
 	}
 
 	// Separate blocks for scoping id, metadata, doc
@@ -133,7 +142,25 @@ func main() {
 			log.Fatalf("updating document: %v", err)
 		}
 		log.Printf("updated document: %v", updateSuccess)
+
+		got, err := coll.Get(ctx, chroma.GetQuery{
+			Where:   chroma.Where{"operation": "update"},
+			Include: []chroma.Include{chroma.IncludeDocuments, chroma.IncludeMetadatas},
+		})
+		if err != nil {
+			log.Fatalf("getting document: %v", err)
+		}
+		log.Printf("got document: %+v", got)
 	}
+
+	got, err := coll.Get(ctx, chroma.GetQuery{
+		Where:   chroma.Where{"operation": "update"},
+		Include: []chroma.Include{chroma.IncludeDocuments, chroma.IncludeMetadatas},
+	})
+	if err != nil {
+		log.Fatalf("getting document: %v", err)
+	}
+	log.Printf("got document: %+v", got)
 
 	count, err := coll.Count(ctx)
 	if err != nil {

@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.2",
+  "openapi": "3.1.0",
   "info": {
     "title": "FastAPI",
     "version": "0.1.0"
@@ -15,7 +15,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object",
+                  "title": "Response Root Api V1 Get"
                 }
               }
             }
@@ -33,7 +37,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "boolean",
+                  "title": "Response Reset Api V1 Reset Post"
                 }
               }
             }
@@ -51,7 +56,8 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "string",
+                  "title": "Response Version Api V1 Version Get"
                 }
               }
             }
@@ -69,63 +75,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/persist": {
-      "post": {
-        "summary": "Persist",
-        "operationId": "persist",
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/raw_sql": {
-      "post": {
-        "summary": "Raw Sql",
-        "operationId": "raw_sql",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/RawSql"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "type": "object",
+                  "title": "Response Heartbeat Api V1 Heartbeat Get"
                 }
               }
             }
@@ -195,8 +149,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Id",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Id"
             },
             "name": "collection_id",
             "in": "path"
@@ -244,8 +198,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Id",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Id"
             },
             "name": "collection_id",
             "in": "path"
@@ -293,8 +247,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Id",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Id"
             },
             "name": "collection_id",
             "in": "path"
@@ -342,8 +296,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Id",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Id"
             },
             "name": "collection_id",
             "in": "path"
@@ -391,8 +345,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Id",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Id"
             },
             "name": "collection_id",
             "in": "path"
@@ -440,8 +394,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Id",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Id"
             },
             "name": "collection_id",
             "in": "path"
@@ -479,8 +433,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Id",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Id"
             },
             "name": "collection_id",
             "in": "path"
@@ -520,45 +474,6 @@
         }
       }
     },
-    "/api/v1/collections/{collection_name}/create_index": {
-      "post": {
-        "summary": "Create Index",
-        "operationId": "create_index",
-        "parameters": [
-          {
-            "required": true,
-            "schema": {
-              "title": "Collection Name",
-              "type": "string"
-            },
-            "name": "collection_name",
-            "in": "path"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/v1/collections/{collection_name}": {
       "get": {
         "summary": "Get Collection",
@@ -567,8 +482,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Name",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Name"
             },
             "name": "collection_name",
             "in": "path"
@@ -604,8 +519,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Name",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Name"
             },
             "name": "collection_name",
             "in": "path"
@@ -643,8 +558,8 @@
           {
             "required": true,
             "schema": {
-              "title": "Collection Id",
-              "type": "string"
+              "type": "string",
+              "title": "Collection Id"
             },
             "name": "collection_id",
             "in": "path"
@@ -688,128 +603,119 @@
   "components": {
     "schemas": {
       "AddEmbedding": {
-        "title": "AddEmbedding",
-        "required": [
-          "ids"
-        ],
-        "type": "object",
         "properties": {
           "embeddings": {
-            "title": "Embeddings",
-            "type": "array",
             "items": {
               "type": "array",
               "items": {
                 "type": "number",
                 "format": "double"
               }
-            }
+            },
+            "type": "array",
+            "title": "Embeddings"
           },
           "metadatas": {
-            "title": "Metadatas",
-            "type": "array",
             "items": {
               "type": "object"
-            }
+            },
+            "type": "array",
+            "title": "Metadatas"
           },
           "documents": {
-            "title": "Documents",
-            "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "type": "array",
+            "title": "Documents"
           },
           "ids": {
-            "title": "Ids",
-            "type": "array",
             "items": {
               "type": "string"
-            }
-          },
-          "increment_index": {
-            "title": "Increment Index",
-            "type": "boolean",
-            "default": true
+            },
+            "type": "array",
+            "title": "Ids"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "ids"
+        ],
+        "title": "AddEmbedding"
       },
       "CreateCollection": {
-        "title": "CreateCollection",
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "metadata": {
+            "type": "object",
+            "title": "Metadata"
+          },
+          "get_or_create": {
+            "type": "boolean",
+            "title": "Get Or Create",
+            "default": false
+          }
+        },
+        "type": "object",
         "required": [
           "name"
         ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "metadata": {
-            "title": "Metadata",
-            "type": "object"
-          },
-          "get_or_create": {
-            "title": "Get Or Create",
-            "type": "boolean",
-            "default": false
-          }
-        }
+        "title": "CreateCollection"
       },
       "DeleteEmbedding": {
-        "title": "DeleteEmbedding",
-        "type": "object",
         "properties": {
           "ids": {
-            "title": "Ids",
-            "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "type": "array",
+            "title": "Ids"
           },
           "where": {
-            "title": "Where",
-            "type": "object"
+            "type": "object",
+            "title": "Where"
           },
           "where_document": {
-            "title": "Where Document",
-            "type": "object"
+            "type": "object",
+            "title": "Where Document"
           }
-        }
+        },
+        "type": "object",
+        "title": "DeleteEmbedding"
       },
       "GetEmbedding": {
-        "title": "GetEmbedding",
-        "type": "object",
         "properties": {
           "ids": {
-            "title": "Ids",
-            "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "type": "array",
+            "title": "Ids"
           },
           "where": {
-            "title": "Where",
-            "type": "object"
+            "type": "object",
+            "title": "Where"
           },
           "where_document": {
-            "title": "Where Document",
-            "type": "object"
+            "type": "object",
+            "title": "Where Document"
           },
           "sort": {
-            "title": "Sort",
-            "type": "string"
+            "type": "string",
+            "title": "Sort"
           },
           "limit": {
-            "title": "Limit",
-            "type": "integer"
+            "type": "integer",
+            "title": "Limit"
           },
           "offset": {
-            "title": "Offset",
-            "type": "integer"
+            "type": "integer",
+            "title": "Offset"
           },
           "include": {
-            "title": "Include",
-            "type": "array",
             "items": {
               "type": "string",
               "enum": [
@@ -819,58 +725,55 @@
                 "distances"
               ]
             },
+            "type": "array",
+            "title": "Include",
             "default": [
               "metadatas",
               "documents"
             ]
           }
-        }
+        },
+        "type": "object",
+        "title": "GetEmbedding"
       },
       "HTTPValidationError": {
-        "title": "HTTPValidationError",
-        "type": "object",
         "properties": {
           "detail": {
-            "title": "Detail",
-            "type": "array",
             "items": {
               "$ref": "#/components/schemas/ValidationError"
-            }
+            },
+            "type": "array",
+            "title": "Detail"
           }
-        }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
       },
       "QueryEmbedding": {
-        "title": "QueryEmbedding",
-        "required": [
-          "query_embeddings"
-        ],
-        "type": "object",
         "properties": {
           "where": {
-            "title": "Where",
             "type": "object",
+            "title": "Where",
             "default": {}
           },
           "where_document": {
-            "title": "Where Document",
             "type": "object",
+            "title": "Where Document",
             "default": {}
           },
           "query_embeddings": {
-            "title": "Query Embeddings",
-            "type": "array",
             "items": {
               "type": "object"
-            }
+            },
+            "type": "array",
+            "title": "Query Embeddings"
           },
           "n_results": {
-            "title": "N Results",
             "type": "integer",
+            "title": "N Results",
             "default": 10
           },
           "include": {
-            "title": "Include",
-            "type": "array",
             "items": {
               "type": "string",
               "enum": [
@@ -880,99 +783,79 @@
                 "distances"
               ]
             },
+            "type": "array",
+            "title": "Include",
             "default": [
               "metadatas",
               "documents",
               "distances"
             ]
           }
-        }
-      },
-      "RawSql": {
-        "title": "RawSql",
-        "required": [
-          "raw_sql"
-        ],
+        },
         "type": "object",
-        "properties": {
-          "raw_sql": {
-            "title": "Raw Sql",
-            "type": "string"
-          }
-        }
+        "required": [
+          "query_embeddings"
+        ],
+        "title": "QueryEmbedding"
       },
       "UpdateCollection": {
-        "title": "UpdateCollection",
-        "type": "object",
         "properties": {
           "new_name": {
-            "title": "New Name",
-            "type": "string"
+            "type": "string",
+            "title": "New Name"
           },
           "new_metadata": {
-            "title": "New Metadata",
-            "type": "object"
+            "type": "object",
+            "title": "New Metadata"
           }
-        }
+        },
+        "type": "object",
+        "title": "UpdateCollection"
       },
       "UpdateEmbedding": {
-        "title": "UpdateEmbedding",
-        "required": [
-          "ids"
-        ],
-        "type": "object",
         "properties": {
           "embeddings": {
-            "title": "Embeddings",
-            "type": "array",
             "items": {
               "type": "array",
               "items": {
                 "type": "number",
                 "format": "double"
               }
-            }
+            },
+            "type": "array",
+            "title": "Embeddings"
           },
           "metadatas": {
-            "title": "Metadatas",
-            "type": "array",
             "items": {
               "type": "object"
-            }
+            },
+            "type": "array",
+            "title": "Metadatas"
           },
           "documents": {
-            "title": "Documents",
-            "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "type": "array",
+            "title": "Documents"
           },
           "ids": {
-            "title": "Ids",
-            "type": "array",
             "items": {
               "type": "string"
-            }
-          },
-          "increment_index": {
-            "title": "Increment Index",
-            "type": "boolean",
-            "default": true
+            },
+            "type": "array",
+            "title": "Ids"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "ids"
+        ],
+        "title": "UpdateEmbedding"
       },
       "ValidationError": {
-        "title": "ValidationError",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
-        "type": "object",
         "properties": {
           "loc": {
-            "title": "Location",
-            "type": "array",
             "items": {
               "anyOf": [
                 {
@@ -982,17 +865,26 @@
                   "type": "integer"
                 }
               ]
-            }
+            },
+            "type": "array",
+            "title": "Location"
           },
           "msg": {
-            "title": "Message",
-            "type": "string"
+            "type": "string",
+            "title": "Message"
           },
           "type": {
-            "title": "Error Type",
-            "type": "string"
+            "type": "string",
+            "title": "Error Type"
           }
-        }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
       }
     }
   }

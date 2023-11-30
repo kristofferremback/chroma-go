@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/kristofferostlund/chroma-go/chroma/chromaclient"
+	"github.com/kristofferostlund/chroma-go/pkg/nillable"
 )
 
 var ErrInvalidInput = errors.New("invalid input")
@@ -24,6 +25,31 @@ type Collection struct {
 
 	api          chromaclient.ClientInterface
 	embeddingGen EmbeddingGenerator
+}
+
+var _ EmbeddingGenerator = (*noEmbeddingGenerator)(nil)
+
+type noEmbeddingGenerator struct{}
+
+func (*noEmbeddingGenerator) Generate(ctx context.Context, documents []Document) ([]Embedding, error) {
+	return nil, fmt.Errorf("%w: no embedding generator set", ErrInvalidInput)
+}
+
+func newCollection(id, name string, metadata Metadata, api chromaclient.ClientInterface, embeddingGen EmbeddingGenerator) *Collection {
+	coll := &Collection{
+		ID:       id,
+		Name:     name,
+		Metadata: metadata,
+
+		api:          api,
+		embeddingGen: &noEmbeddingGenerator{},
+	}
+
+	if embeddingGen != nil {
+		coll.embeddingGen = embeddingGen
+	}
+
+	return coll
 }
 
 func (c *Collection) Add(ctx context.Context, ids []ID, embeddings []Embedding, metadatas []Metadata, documents []Document) (bool, error) {
@@ -184,6 +210,153 @@ func (c *Collection) Modify(ctx context.Context, name string, metadata Metadata)
 	return nil
 }
 
+type Operator string
+
+const (
+	And      Operator = "$and"
+	Or       Operator = "$or"
+	Gt       Operator = "$gt"
+	Gte      Operator = "$gte"
+	Lt       Operator = "$lt"
+	Lte      Operator = "$lte"
+	Ne       Operator = "$ne"
+	Eq       Operator = "$eq"
+	Contains Operator = "$contains"
+)
+
+type (
+	Where         = map[Operator]interface{}
+	WhereDocument = map[Operator]interface{}
+
+	GetQuery struct {
+		IDs           []ID
+		Where         Where
+		Limit         int
+		Offset        int
+		Include       []Include
+		WhereDocument WhereDocument
+	}
+)
+
+func (c *Collection) Get(ctx context.Context, query GetQuery) (EmbeddingResponse, error) {
+	body := chromaclient.GetEmbedding{}
+	if len(query.IDs) > 0 {
+		body.Ids = &query.IDs
+	}
+	if len(query.Where) > 0 {
+		where := make(map[string]interface{}, len(query.Where))
+		for k, v := range query.Where {
+			where[string(k)] = v
+		}
+		body.Where = &where
+	}
+	if len(query.WhereDocument) > 0 {
+		whereDoc := make(map[string]interface{}, len(query.WhereDocument))
+		for k, v := range query.WhereDocument {
+			whereDoc[string(k)] = v
+		}
+		body.WhereDocument = &whereDoc
+	}
+	if query.Limit > 0 {
+		body.Limit = &query.Limit
+	}
+	if query.Offset > 0 {
+		body.Offset = &query.Offset
+	}
+	if len(query.Include) > 0 {
+		incl, err := validatedInclude(query.Include, false)
+		if err != nil {
+			return EmbeddingResponse{}, fmt.Errorf("validating include: %w", err)
+		}
+		body.Include = &incl
+	}
+
+	r, err := handleResponse(c.api.Get(ctx, c.ID, body))
+	if err != nil {
+		return EmbeddingResponse{}, fmt.Errorf("querying collection (%s): %w", c.ID, err)
+	}
+
+	var response EmbeddingResponse
+	if err := r.decodeJSON(&response); err != nil {
+		return EmbeddingResponse{}, fmt.Errorf("decoding response: %w", err)
+	}
+
+	return response, nil
+}
+
+type QueryQuery struct {
+	Embeddings    []Embedding
+	QueryTexts    []string
+	Where         Where
+	WhereDocument WhereDocument
+	NResults      int
+	Include       []Include
+}
+
+func (c *Collection) Query(ctx context.Context, query QueryQuery) (EmbeddingResponse, error) {
+	body := chromaclient.QueryEmbedding{}
+	switch {
+	case len(query.Embeddings) > 0:
+	case len(query.Embeddings) == 0 && len(query.QueryTexts) > 0:
+		generatedEmbeddings, err := c.embeddingGen.Generate(ctx, query.QueryTexts)
+		if err != nil {
+			return EmbeddingResponse{}, fmt.Errorf("generating embeddings: %w", err)
+		}
+		body.
+	case len(query.Embeddings) == 0 && len(query.QueryTexts) == 0:
+		return EmbeddingResponse{}, fmt.Errorf("must provide at least one embedding or query text")
+
+	}
+
+	if query.NResults == 0 {
+		body.NResults = nillable.Of(10)
+	}
+
+	return EmbeddingResponse{}, fmt.Errorf("not implemented")
+}
+
+type Include string
+
+const (
+	IncludeMetadatas  Include = "metadatas"
+	IncludeDocuments  Include = "documents"
+	IncludeEmbeddings Include = "embeddings"
+	// IncludeDistances is not valid for Get.
+	IncludeDistances Include = "distances"
+)
+
+var (
+	IncludeAllGet   = includeAllExceptDistance
+	IncludeAllQuery = includeAll
+
+	includeAll               = []Include{IncludeMetadatas, IncludeDocuments, IncludeEmbeddings, IncludeDistances}
+	includeAllExceptDistance = []Include{IncludeMetadatas, IncludeDocuments, IncludeEmbeddings}
+
+	legalIncludes = map[Include]struct{}{
+		IncludeMetadatas:  {},
+		IncludeDocuments:  {},
+		IncludeEmbeddings: {},
+		IncludeDistances:  {},
+	}
+)
+
+func validatedInclude(include []Include, allowDistances bool) ([]chromaclient.GetEmbeddingInclude, error) {
+	incl := make([]chromaclient.GetEmbeddingInclude, 0, len(include))
+	for _, v := range include {
+		if _, ok := legalIncludes[v]; !ok {
+			return nil, fmt.Errorf("%w: got include %q, must be one of %v", ErrInvalidInput, v, includeAllExceptDistance)
+		}
+		// When calling Get, there's no distance, however when calling Query, there is.
+		// This validation is delegated to the client as it returns a 500 if included in
+		// the request due to an internal database error: `Missing columns: 'distance'`.
+		if v == IncludeDistances && !allowDistances {
+			return nil, fmt.Errorf("%w: got include %q, must be one of %v", ErrInvalidInput, v, includeAllExceptDistance)
+		}
+		incl = append(incl, chromaclient.GetEmbeddingInclude(v))
+	}
+	return incl, nil
+}
+
 // Copied from types.gen.go to make it clear we're using this explicitly here.
 // In case the types change, this shouldn't be castable to the generated types.
 type setEmbedding struct {
@@ -200,10 +373,6 @@ func (c *Collection) validatedSetEmbeddingRequest(ctx context.Context, ids []ID,
 	}
 
 	if len(embeddings) == 0 && len(documents) > 0 {
-		if c.embeddingGen == nil {
-			return setEmbedding{}, fmt.Errorf("%w: no embedding generator", ErrInvalidInput)
-		}
-
 		generatedEmbeddings, err := c.embeddingGen.Generate(ctx, documents)
 		if err != nil {
 			return setEmbedding{}, fmt.Errorf("generating embeddings: %w", err)

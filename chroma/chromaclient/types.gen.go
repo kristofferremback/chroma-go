@@ -27,11 +27,10 @@ const (
 
 // AddEmbedding defines model for AddEmbedding.
 type AddEmbedding struct {
-	Documents      *[]string                 `json:"documents,omitempty"`
-	Embeddings     *[][]float64              `json:"embeddings,omitempty"`
-	Ids            []string                  `json:"ids"`
-	IncrementIndex *bool                     `json:"increment_index,omitempty"`
-	Metadatas      *[]map[string]interface{} `json:"metadatas,omitempty"`
+	Documents  *[]string                 `json:"documents,omitempty"`
+	Embeddings *[][]float64              `json:"embeddings,omitempty"`
+	Ids        []string                  `json:"ids"`
+	Metadatas  *[]map[string]interface{} `json:"metadatas,omitempty"`
 }
 
 // CreateCollection defines model for CreateCollection.
@@ -79,11 +78,6 @@ type QueryEmbedding struct {
 // QueryEmbeddingInclude defines model for QueryEmbedding.Include.
 type QueryEmbeddingInclude string
 
-// RawSql defines model for RawSql.
-type RawSql struct {
-	RawSql string `json:"raw_sql"`
-}
-
 // UpdateCollection defines model for UpdateCollection.
 type UpdateCollection struct {
 	NewMetadata *map[string]interface{} `json:"new_metadata,omitempty"`
@@ -92,11 +86,10 @@ type UpdateCollection struct {
 
 // UpdateEmbedding defines model for UpdateEmbedding.
 type UpdateEmbedding struct {
-	Documents      *[]string                 `json:"documents,omitempty"`
-	Embeddings     *[][]float64              `json:"embeddings,omitempty"`
-	Ids            []string                  `json:"ids"`
-	IncrementIndex *bool                     `json:"increment_index,omitempty"`
-	Metadatas      *[]map[string]interface{} `json:"metadatas,omitempty"`
+	Documents  *[]string                 `json:"documents,omitempty"`
+	Embeddings *[][]float64              `json:"embeddings,omitempty"`
+	Ids        []string                  `json:"ids"`
+	Metadatas  *[]map[string]interface{} `json:"metadatas,omitempty"`
 }
 
 // ValidationError defines model for ValidationError.
@@ -140,9 +133,6 @@ type UpdateJSONRequestBody = UpdateEmbedding
 
 // UpsertJSONRequestBody defines body for Upsert for application/json ContentType.
 type UpsertJSONRequestBody = AddEmbedding
-
-// RawSqlJSONRequestBody defines body for RawSql for application/json ContentType.
-type RawSqlJSONRequestBody = RawSql
 
 // AsValidationErrorLoc0 returns the union data inside the ValidationError_Loc_Item as a ValidationErrorLoc0
 func (t ValidationError_Loc_Item) AsValidationErrorLoc0() (ValidationErrorLoc0, error) {

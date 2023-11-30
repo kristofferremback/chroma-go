@@ -144,19 +144,8 @@ type ClientInterface interface {
 	// GetCollection request
 	GetCollection(ctx context.Context, collectionName string, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// CreateIndex request
-	CreateIndex(ctx context.Context, collectionName string, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// Heartbeat request
 	Heartbeat(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// Persist request
-	Persist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	// RawSql request with any body
-	RawSqlWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	RawSql(ctx context.Context, body RawSqlJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// Reset request
 	Reset(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -417,56 +406,8 @@ func (c *Client) GetCollection(ctx context.Context, collectionName string, reqEd
 	return c.Client.Do(req)
 }
 
-func (c *Client) CreateIndex(ctx context.Context, collectionName string, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewCreateIndexRequest(c.Server, collectionName)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
 func (c *Client) Heartbeat(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewHeartbeatRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) Persist(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewPersistRequest(c.Server)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RawSqlWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRawSqlRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) RawSql(ctx context.Context, body RawSqlJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewRawSqlRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -1026,40 +967,6 @@ func NewGetCollectionRequest(server string, collectionName string) (*http.Reques
 	return req, nil
 }
 
-// NewCreateIndexRequest generates requests for CreateIndex
-func NewCreateIndexRequest(server string, collectionName string) (*http.Request, error) {
-	var err error
-
-	var pathParam0 string
-
-	pathParam0, err = runtime.StyleParamWithLocation("simple", false, "collection_name", runtime.ParamLocationPath, collectionName)
-	if err != nil {
-		return nil, err
-	}
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/collections/%s/create_index", pathParam0)
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
 // NewHeartbeatRequest generates requests for Heartbeat
 func NewHeartbeatRequest(server string) (*http.Request, error) {
 	var err error
@@ -1083,73 +990,6 @@ func NewHeartbeatRequest(server string) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	return req, nil
-}
-
-// NewPersistRequest generates requests for Persist
-func NewPersistRequest(server string) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/persist")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return req, nil
-}
-
-// NewRawSqlRequest calls the generic RawSql builder with application/json body
-func NewRawSqlRequest(server string, body RawSqlJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewRawSqlRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewRawSqlRequestWithBody generates requests for RawSql with any type of body
-func NewRawSqlRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/api/v1/raw_sql")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
 
 	return req, nil
 }
@@ -1306,19 +1146,8 @@ type ClientWithResponsesInterface interface {
 	// GetCollection request
 	GetCollectionWithResponse(ctx context.Context, collectionName string, reqEditors ...RequestEditorFn) (*GetCollectionResponse, error)
 
-	// CreateIndex request
-	CreateIndexWithResponse(ctx context.Context, collectionName string, reqEditors ...RequestEditorFn) (*CreateIndexResponse, error)
-
 	// Heartbeat request
 	HeartbeatWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HeartbeatResponse, error)
-
-	// Persist request
-	PersistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PersistResponse, error)
-
-	// RawSql request with any body
-	RawSqlWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RawSqlResponse, error)
-
-	RawSqlWithResponse(ctx context.Context, body RawSqlJSONRequestBody, reqEditors ...RequestEditorFn) (*RawSqlResponse, error)
 
 	// Reset request
 	ResetWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*ResetResponse, error)
@@ -1330,7 +1159,7 @@ type ClientWithResponsesInterface interface {
 type RootResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *map[string]interface{}
+	JSON200      *map[string]int
 }
 
 // Status returns HTTPResponse.Status
@@ -1624,33 +1453,10 @@ func (r GetCollectionResponse) StatusCode() int {
 	return 0
 }
 
-type CreateIndexResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *map[string]interface{}
-	JSON422      *HTTPValidationError
-}
-
-// Status returns HTTPResponse.Status
-func (r CreateIndexResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r CreateIndexResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type HeartbeatResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *map[string]interface{}
+	JSON200      *map[string]int
 }
 
 // Status returns HTTPResponse.Status
@@ -1669,55 +1475,10 @@ func (r HeartbeatResponse) StatusCode() int {
 	return 0
 }
 
-type PersistResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *map[string]interface{}
-}
-
-// Status returns HTTPResponse.Status
-func (r PersistResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r PersistResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type RawSqlResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *map[string]interface{}
-	JSON422      *HTTPValidationError
-}
-
-// Status returns HTTPResponse.Status
-func (r RawSqlResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r RawSqlResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
 type ResetResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *map[string]interface{}
+	JSON200      *bool
 }
 
 // Status returns HTTPResponse.Status
@@ -1739,7 +1500,7 @@ func (r ResetResponse) StatusCode() int {
 type VersionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *map[string]interface{}
+	JSON200      *string
 }
 
 // Status returns HTTPResponse.Status
@@ -1939,15 +1700,6 @@ func (c *ClientWithResponses) GetCollectionWithResponse(ctx context.Context, col
 	return ParseGetCollectionResponse(rsp)
 }
 
-// CreateIndexWithResponse request returning *CreateIndexResponse
-func (c *ClientWithResponses) CreateIndexWithResponse(ctx context.Context, collectionName string, reqEditors ...RequestEditorFn) (*CreateIndexResponse, error) {
-	rsp, err := c.CreateIndex(ctx, collectionName, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseCreateIndexResponse(rsp)
-}
-
 // HeartbeatWithResponse request returning *HeartbeatResponse
 func (c *ClientWithResponses) HeartbeatWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*HeartbeatResponse, error) {
 	rsp, err := c.Heartbeat(ctx, reqEditors...)
@@ -1955,32 +1707,6 @@ func (c *ClientWithResponses) HeartbeatWithResponse(ctx context.Context, reqEdit
 		return nil, err
 	}
 	return ParseHeartbeatResponse(rsp)
-}
-
-// PersistWithResponse request returning *PersistResponse
-func (c *ClientWithResponses) PersistWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*PersistResponse, error) {
-	rsp, err := c.Persist(ctx, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParsePersistResponse(rsp)
-}
-
-// RawSqlWithBodyWithResponse request with arbitrary body returning *RawSqlResponse
-func (c *ClientWithResponses) RawSqlWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RawSqlResponse, error) {
-	rsp, err := c.RawSqlWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRawSqlResponse(rsp)
-}
-
-func (c *ClientWithResponses) RawSqlWithResponse(ctx context.Context, body RawSqlJSONRequestBody, reqEditors ...RequestEditorFn) (*RawSqlResponse, error) {
-	rsp, err := c.RawSql(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseRawSqlResponse(rsp)
 }
 
 // ResetWithResponse request returning *ResetResponse
@@ -2016,7 +1742,7 @@ func ParseRootResponse(rsp *http.Response) (*RootResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest map[string]interface{}
+		var dest map[string]int
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2416,39 +2142,6 @@ func ParseGetCollectionResponse(rsp *http.Response) (*GetCollectionResponse, err
 	return response, nil
 }
 
-// ParseCreateIndexResponse parses an HTTP response from a CreateIndexWithResponse call
-func ParseCreateIndexResponse(rsp *http.Response) (*CreateIndexResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &CreateIndexResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest map[string]interface{}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest HTTPValidationError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseHeartbeatResponse parses an HTTP response from a HeartbeatWithResponse call
 func ParseHeartbeatResponse(rsp *http.Response) (*HeartbeatResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -2464,70 +2157,11 @@ func ParseHeartbeatResponse(rsp *http.Response) (*HeartbeatResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest map[string]interface{}
+		var dest map[string]int
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
 		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParsePersistResponse parses an HTTP response from a PersistWithResponse call
-func ParsePersistResponse(rsp *http.Response) (*PersistResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &PersistResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest map[string]interface{}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseRawSqlResponse parses an HTTP response from a RawSqlWithResponse call
-func ParseRawSqlResponse(rsp *http.Response) (*RawSqlResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &RawSqlResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest map[string]interface{}
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 422:
-		var dest HTTPValidationError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON422 = &dest
 
 	}
 
@@ -2549,7 +2183,7 @@ func ParseResetResponse(rsp *http.Response) (*ResetResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest map[string]interface{}
+		var dest bool
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -2575,7 +2209,7 @@ func ParseVersionResponse(rsp *http.Response) (*VersionResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest map[string]interface{}
+		var dest string
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
